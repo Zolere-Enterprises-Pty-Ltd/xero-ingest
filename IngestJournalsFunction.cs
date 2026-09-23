@@ -295,6 +295,19 @@ namespace XeroIngest
 
             _logger.LogInformation("Upserted journals: {journals}",  totalUpserted);
             _logger.LogInformation("Upserted journal lines: {lines}", totalLines);
+
+            // The chart of accounts rides along on this timer rather than running its own, so it
+            // reuses the access token already minted above. XeroTokenRefresh is single-use and
+            // rotates on every refresh, so a second timer doing its own refresh would race this one.
+            try
+            {
+                await AccountsLoader.RunAsync(_httpClient, accessToken, tenantId, sqlConnection, _logger);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Account ingest threw; dbo.XroAccount left unchanged");
+            }
+
             _logger.LogInformation("Xero journal ingest completed at {time}", DateTime.UtcNow);
         }
     }
